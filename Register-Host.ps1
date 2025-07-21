@@ -20,19 +20,31 @@ Add-RdsSessionHost -TenantName   $tenant.Name `
  #>
 
 
-if (!(Test-Path -Path "C:\Temp")) {
-    New-Item -ItemType Directory -Path "C:\Temp"
-}
 
 param(
     [string] $registrationToken
 )
 
-$agentInstallerPath = "C:\Temp\AVDAgent.msi"
-$bootLoaderInstallerPath = "C:\Temp\AVDBootLoader.msi"
+$downloadMap = @{
+    'https://go.microsoft.com/fwlink/?linkid=2310011' = 'AVDAgent.msi'
+    'https://go.microsoft.com/fwlink/?linkid=2311028' = 'AVDBootLoader.msi'
+}
+$targetPath = 'C:\Temp'
 
-Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2310011" -OutFile $agentInstallerPath
-Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2311028" -OutFile $bootLoaderInstallerPath
+if (-not (Test-Path $targetPath)) { New-Item -Path $targetPath -ItemType Directory | Out-Null }
+Set-Location $targetPath
 
-msiexec.exe /i $agentInstallerPath /quiet /qn /norestart REGISTRATIONTOKEN=$registrationToken
-msiexec.exe /i $bootLoaderInstallerPath /quiet /qn /norestart
+foreach ($kvp in $downloadMap.GetEnumerator()) {
+    $uri        = $kvp.Key
+    $fixedName  = $kvp.Value
+    $expanded   = (Invoke-WebRequest -Uri $uri -MaximumRedirection 0 -ErrorAction SilentlyContinue).Headers.Location
+    Invoke-WebRequest -Uri $expanded -OutFile $fixedName -UseBasicParsing
+    Unblock-File -Path $fixedName
+}
+
+msiexec /i "$targetPath\AVDAgent.msi" /quiet /norestart REGISTRATIONTOKEN=$registrationToken "/l*v" "$($targetPath)\AVDAgentInstall.log"
+
+msiexec /i "$targetPath\AVDBootLoader.msi" /quiet /norestart "/l*v" "$($targetPath)\AVDBootLoader.log"
+
+
+
