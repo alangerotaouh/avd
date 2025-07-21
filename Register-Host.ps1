@@ -25,14 +25,17 @@ param(
     [string] $registrationToken
 )
 
-$downloadMap = @{
-    'https://go.microsoft.com/fwlink/?linkid=2310011' = 'AVDAgent.msi'
-    'https://go.microsoft.com/fwlink/?linkid=2311028' = 'AVDBootLoader.msi'
-}
 $targetPath = 'C:\Temp'
 
 if (-not (Test-Path $targetPath)) { New-Item -Path $targetPath -ItemType Directory | Out-Null }
 Set-Location $targetPath
+
+cd C:\Temp
+
+$downloadMap = @{
+    'https://go.microsoft.com/fwlink/?linkid=2310011' = 'AVDAgent.msi'
+    'https://go.microsoft.com/fwlink/?linkid=2311028' = 'AVDBootLoader.msi'
+}
 
 foreach ($kvp in $downloadMap.GetEnumerator()) {
     $uri        = $kvp.Key
