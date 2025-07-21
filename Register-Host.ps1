@@ -19,6 +19,11 @@ Add-RdsSessionHost -TenantName   $tenant.Name `
                    -Name         $computer
  #>
 
+
+if (!(Test-Path -Path "C:\Temp")) {
+    New-Item -ItemType Directory -Path "C:\Temp"
+}
+
 param(
     [string] $registrationToken
 )
@@ -29,5 +34,5 @@ $bootLoaderInstallerPath = "C:\Temp\AVDBootLoader.msi"
 Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2310011" -OutFile $agentInstallerPath
 Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2311028" -OutFile $bootLoaderInstallerPath
 
-Start-Process msiexec.exe -Wait -ArgumentList "/I $agentInstallerPath /quiet /qn /norestart REGISTRATIONTOKEN=$registrationToken"
-Start-Process msiexec.exe -Wait -ArgumentList "/I $bootLoaderInstallerPath /quiet /qn /norestart"
+msiexec.exe /i $agentInstallerPath /quiet /qn /norestart REGISTRATIONTOKEN=$registrationToken
+msiexec.exe /i $bootLoaderInstallerPath /quiet /qn /norestart
