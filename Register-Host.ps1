@@ -14,6 +14,7 @@ if (-not (Test-Path $targetPath)) {
 $downloadMap = @{
     'https://go.microsoft.com/fwlink/?linkid=2310011' = 'AVDAgent.msi'
     'https://go.microsoft.com/fwlink/?linkid=2311028' = 'AVDBootLoader.msi'
+    'https://aka.ms/fslogix_download' = 'FSLogix.zip'
 }
 
 foreach ($kvp in $downloadMap.GetEnumerator()) {
@@ -25,10 +26,40 @@ foreach ($kvp in $downloadMap.GetEnumerator()) {
   Unblock-File    -Path   $outFile
 }
 
+# Prüfen und ggf. nur die fehlenden Dateien erneut herunterladen
+$fehlend = $downloadMap.Values |
+    Where-Object { -not (Test-Path (Join-Path $targetPath $_)) }
+
+if ($fehlend) {
+    Write-Host "Folgende Dateien fehlen: $($fehlend -join ', '). Starte erneuten Download..."
+    foreach ($file in $fehlend) {
+        $uri = $downloadMap.GetEnumerator() |
+               Where-Object { $_.Value -eq $file } |
+               Select-Object -ExpandProperty Key
+        $outFile = Join-Path $targetPath $file
+
+        Invoke-WebRequest -Uri $uri -OutFile $outFile
+        Unblock-File    -Path   $outFile
+    }
+}
+
+Expand-Archive -Path 'C:\Temp\FSLogix.zip' -DestinationPath 'C:\Temp\FSLogix' -Force
+
 # Silent-Installation aus C:\Temp
 msiexec /i "$targetPath\AVDAgent.msi" /qn /quiet /norestart REGISTRATIONTOKEN=$registrationToken "/l*v" "$targetPath\AVDAgentInstall.log"
 Start-Sleep -Seconds 30
 msiexec /i "$targetPath\AVDBootLoader.msi" /qn /quiet /norestart "/l*v" "$targetPath\AVDBootLoader.log"
+Start-Sleep -Seconds 30
+C:\Temp\FSLogix\x64\Release\FSLogixAppsSetup.exe /norestart /quiet
+Start-Sleep -Seconds 180
+
+# FSLogix Registry Path
+$regPath = 'HKLM:\SOFTWARE\FSLogix\Profiles'
+
+# Prüfen und Key anlegen, falls nicht vorhanden
+if (-not (Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
 
 Start-Sleep -Seconds 30
 
