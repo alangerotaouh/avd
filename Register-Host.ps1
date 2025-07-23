@@ -1,6 +1,6 @@
 param(
     [string] $registrationToken,
-    [string] $storageAccountName
+    [string] bliblablub
 )
 
 $targetPath = 'C:\Temp'
@@ -66,7 +66,7 @@ Start-Sleep -Seconds 30
 #setfslogix
 $registryPath = "HKLM:\SOFTWARE\FSLogix\Profiles"
 New-ItemProperty -Path $registryPath -Name "Enabled" -Value 1 -PropertyType DWORD -Force
-$multiSzValue = "\\$storageAccountName.file.core.windows.net\profiles"
+$multiSzValue = "\\${storageAccountName}.file.core.windows.net\profiles"
 New-ItemProperty -Path $registryPath -Name "VHDLocations" -Value $multiSzValue -PropertyType MultiString -Force
 
 Start-Sleep -Seconds 30
