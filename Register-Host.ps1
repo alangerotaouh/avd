@@ -80,5 +80,10 @@ foreach ($kvp in $downloadMap.GetEnumerator()) {
 
 # Silent-Installation aus C:\Temp
 msiexec /i "$targetPath\AVDAgent.msi" /qn /quiet /norestart REGISTRATIONTOKEN=$registrationToken "/l*v" "$targetPath\AVDAgentInstall.log"
+
+Start-Sleep -Seconds 30
+
 msiexec /i "$targetPath\AVDBootLoader.msi" /qn /quiet /norestart "/l*v" "$targetPath\AVDBootLoader.log"
+
+
 
