@@ -1,6 +1,6 @@
 param(
     [string] $registrationToken,
-    [string] bliblablub
+    [string] $storageAccountName
 )
 
 $targetPath = 'C:\Temp'
