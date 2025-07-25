@@ -97,7 +97,7 @@ Configuration Deploy-DomainServices
 # Start neuer Block mit OUs
         ADOrganizationalUnit OU_EntraSync {
             Name        = 'EntraSync'
-            Path        = "DC=$domainSuffix,DC=com" # Domain anpassen
+            Path        = "DC=$domainSuffix,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[WaitForADDomain]WaitForDomainController'
@@ -105,7 +105,7 @@ Configuration Deploy-DomainServices
 
         ADOrganizationalUnit OU_Users {
             Name        = 'Users'
-            Path        = "OU=EntraSync,DC=$domainSuffix,DC=com" # Domain anpassen
+            Path        = "OU=EntraSync,DC=$domainSuffix,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
@@ -113,7 +113,7 @@ Configuration Deploy-DomainServices
 
         ADOrganizationalUnit OU_Groups {
             Name        = 'Groups'
-            Path        = "OU=EntraSync,DC=$domainSuffix,DC=com" # Domain anpassen
+            Path        = "OU=EntraSync,DC=$domainSuffix,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
