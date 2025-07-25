@@ -162,7 +162,7 @@ Configuration Deploy-DomainServices
             Path          = "OU=Groups,OU=EntraSync,DC=$domainName,DC=local"
             Ensure        = 'Present'
             GroupScope    = 'Global'
-            GroupCategory = 'Security'
+            Category = 'Security'
             Credential    = $domainCredential
             DependsOn     = '[ADOrganizationalUnit]OU_Groups'
         }
@@ -172,7 +172,7 @@ Configuration Deploy-DomainServices
             Path          = "OU=Groups,OU=EntraSync,DC=$domainName,DC=local"
             Ensure        = 'Present'
             GroupScope    = 'Global'
-            GroupCategory = 'Security'
+            Category = 'Security'
             Credential    = $domainCredential
             DependsOn     = '[ADOrganizationalUnit]OU_Groups'
         }
