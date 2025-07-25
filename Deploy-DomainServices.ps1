@@ -134,26 +134,26 @@ Configuration Deploy-DomainServices
 
         ADOrganizationalUnit OU_NoEntraSyncUsers {
             Name        = 'Users'
-            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Path        = "OU=NoEntraSync,DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
-            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+            DependsOn   = '[ADOrganizationalUnit]OU_NoEntraSync'
         }
 
         ADOrganizationalUnit OU_NoEntraSyncGroups {
             Name        = 'Groups'
-            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Path        = "OU=NoEntraSync,DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
-            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+            DependsOn   = '[ADOrganizationalUnit]OU_NoEntraSync'
         }
 
         ADOrganizationalUnit OU_NoEntraSyncStorage {
             Name        = 'Storage'
-            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Path        = "OU=NoEntraSync,DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
-            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+            DependsOn   = '[ADOrganizationalUnit]OU_NoEntraSync'
         }
 # neuer Block mit OU's ENDE
 
