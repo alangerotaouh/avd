@@ -108,6 +108,14 @@ Configuration Deploy-DomainServices
             DependsOn   = '[WaitForADDomain]WaitForDomainController'
         }
 
+        ADOrganizationalUnit OU_NoEntraSync {
+            Name        = 'NoEntraSync'
+            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Ensure      = 'Present'
+            Credential  = $domainCredential
+            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+        }
+
         ADOrganizationalUnit OU_Users {
             Name        = 'Users'
             Path        = "OU=EntraSync,DC=$domainName,DC=local" # Domain anpassen
@@ -123,7 +131,51 @@ Configuration Deploy-DomainServices
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
         }
-# neuer Block mit OU's ENDE        
+
+        ADOrganizationalUnit OU_NoEntraSyncUsers {
+            Name        = 'Users'
+            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Ensure      = 'Present'
+            Credential  = $domainCredential
+            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+        }
+
+        ADOrganizationalUnit OU_NoEntraSyncGroups {
+            Name        = 'Groups'
+            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Ensure      = 'Present'
+            Credential  = $domainCredential
+            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+        }
+
+        ADOrganizationalUnit OU_NoEntraSyncStorage {
+            Name        = 'Storage'
+            Path        = "DC=$domainName,DC=local" # Domain anpassen
+            Ensure      = 'Present'
+            Credential  = $domainCredential
+            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+        }
+# neuer Block mit OU's ENDE
+
+        ADGroup AvdAccess {
+            GroupName     = 'AvdAccess'
+            Path          = "OU=Groups,OU=EntraSync,DC=$domainName,DC=local"
+            Ensure        = 'Present'
+            GroupScope    = 'Global'
+            GroupCategory = 'Security'
+            Credential    = $domainCredential
+            DependsOn     = '[ADOrganizationalUnit]OU_Groups'
+        }
+
+        ADGroup AvdProfileAccess {
+            GroupName     = 'AvdProfileAccess'
+            Path          = "OU=Groups,OU=EntraSync,DC=$domainName,DC=local"
+            Ensure        = 'Present'
+            GroupScope    = 'Global'
+            GroupCategory = 'Security'
+            Credential    = $domainCredential
+            DependsOn     = '[ADOrganizationalUnit]OU_Groups'
+        }
     }
 }
 
