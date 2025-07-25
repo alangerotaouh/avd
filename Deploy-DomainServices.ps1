@@ -103,6 +103,7 @@ Configuration Deploy-DomainServices
             UserPrincipalNameSuffixToAdd = $domainSuffix
             DependsOn                    = '[WaitForADDomain]WaitForDomainController'
         }
+    }
 # Start neuer Block mit OUs
         ADOrganizationalUnit OU_EntraSync {
             Name        = 'EntraSync'
@@ -173,7 +174,7 @@ Configuration Deploy-DomainServices
         }
         ADUser MaxMustermann {
             UserName      = 'MaxMustermann'
-            DomainName    = $domainFQDN
+            DomainName    = $domainSuffix
             Password      = (ConvertTo-SecureString 'P@ssw0rd!' -AsPlainText -Force)
             Ensure        = 'Present'
             Enabled       = $true
