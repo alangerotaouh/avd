@@ -10,6 +10,11 @@ Configuration Deploy-DomainServices
         [System.Management.Automation.PSCredential] $adminCredential
     )
 
+    [String] $domainName = $domainFQDN.Split('.')[0]
+    if ($domainName.Length -gt 15) {
+        $domainName = $domainName.Substring(0,15)
+    }
+
     Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
     Import-DscResource -ModuleName 'ActiveDirectoryDsc'
     Import-DscResource -ModuleName 'ComputerManagementDsc'
@@ -97,7 +102,7 @@ Configuration Deploy-DomainServices
 # Start neuer Block mit OUs
         ADOrganizationalUnit OU_EntraSync {
             Name        = 'EntraSync'
-            Path        = "DC=$domainSuffix,DC=local" # Domain anpassen
+            Path        = "DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[WaitForADDomain]WaitForDomainController'
@@ -105,7 +110,7 @@ Configuration Deploy-DomainServices
 
         ADOrganizationalUnit OU_Users {
             Name        = 'Users'
-            Path        = "OU=EntraSync,DC=$domainSuffix,DC=local" # Domain anpassen
+            Path        = "OU=EntraSync,DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
@@ -113,7 +118,7 @@ Configuration Deploy-DomainServices
 
         ADOrganizationalUnit OU_Groups {
             Name        = 'Groups'
-            Path        = "OU=EntraSync,DC=$domainSuffix,DC=local" # Domain anpassen
+            Path        = "OU=EntraSync,DC=$domainName,DC=local" # Domain anpassen
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
