@@ -135,14 +135,14 @@ Configuration Deploy-DomainServices
             Credential  = $domainCredential
             DependsOn   = '[WaitForADDomain]WaitForDomainController'
         }
-        ADOrganizationalUnit OU_Users {
+        ADOrganizationalUnit OU_NotSyncedUsers {
             Name        = 'Users'
             Path        = "OU=NotSynced,DC=$domainName,DC=local"
             Ensure      = 'Present'
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_NotSynced'
         }
-        ADOrganizationalUnit OU_Groups {
+        ADOrganizationalUnit OU_NotSyncedGroups {
             Name        = 'Groups'
             Path        = "OU=NotSynced,DC=$domainName,DC=local"
             Ensure      = 'Present'
@@ -156,8 +156,8 @@ Configuration Deploy-DomainServices
             Credential  = $domainCredential
             DependsOn   = '[ADOrganizationalUnit]OU_NotSynced'
         }
-# neuer Block mit OU's ENDE   
-# neuer Block mit Benutzern und Gruppen + Gruppenzuordnungen  
+# neuer Block mit OU's ENDE
+# neuer Block mit Benutzern und Gruppen + Gruppenzuordnungen
         ADGroup SyncAdminsGroup {
             GroupName     = 'AVD-Access'
             Ensure        = 'Present'
@@ -185,13 +185,13 @@ Configuration Deploy-DomainServices
             Credential    = $domainCredential
             DependsOn     = '[ADOrganizationalUnit]OU_Users' 
         }
-        GroupMember AddUsertoGroupAVDAccess {
+        ADGroupMember AddUsertoGroupAVDAccess {
             GroupName     = 'AVD-Access'
             MembersToInclude = @('MaxMustermann')
             Credential    = $domainCredential
             DependsOn     = '[ADGroup]AVD-Access','[ADUser]MaxMustermann'
         }
-        GroupMember AddUsertoGroupAVDProfiles {
+        ADGroupMember AddUsertoGroupAVDProfiles {
             GroupName     = 'AVD-Profiles'
             MembersToInclude = @('MaxMustermann')
             Credential    = $domainCredential
