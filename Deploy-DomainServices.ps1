@@ -4,6 +4,7 @@ Configuration Deploy-DomainServices
     (
         [Parameter(Mandatory)]
         [String] $domainFQDN,
+        [String] $domainSuffix,
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential] $adminCredential
@@ -14,113 +15,170 @@ Configuration Deploy-DomainServices
     Import-DscResource -ModuleName 'ComputerManagementDsc'
     Import-DscResource -ModuleName 'NetworkingDsc'
 
-    # Create the NetBIOS name and domain credentials based on the domain FQDN
-    [String] $domainNetBIOSName = (Get-NetBIOSName -DomainFQDN $domainFQDN)
-    [System.Management.Automation.PSCredential] $domainCredential = New-Object System.Management.Automation.PSCredential ("${domainNetBIOSName}\$($adminCredential.UserName)", $adminCredential.Password)
+    # Erstelle NetBIOS-Name und Domain-Credentials basierend auf $domainFQDN
+    $domainCredential = New-Object System.Management.Automation.PSCredential(
+        "$($adminCredential.GetNetworkCredential().Username)@$domainFQDN",
+        $adminCredential.Password
+    )
 
+    # Wähle Netzwerk-Adapter für IP-Konfiguration
     $interface = Get-NetAdapter | Where-Object Name -Like 'Network' | Select-Object -First 1
-        if (-not $interface) {
-    $interface = Get-NetAdapter | Where-Object Name -Like 'Ethernet' | Select-Object -First 1
-}
-    $interfaceAlias = $($interface.Name)
+    if (-not $interface) {
+        $interface = Get-NetAdapter | Where-Object Name -Like 'Ethernet' | Select-Object -First 1
+    }
+    $interfaceAlias = $interface.Name
 
     Node localhost
     {
-        LocalConfigurationManager 
+        LocalConfigurationManager
         {
-            ConfigurationMode = 'ApplyOnly'
-            RebootNodeIfNeeded = $true
+            ConfigurationMode     = 'ApplyOnly'
+            RebootNodeIfNeeded    = $true
         }
 
-        WindowsFeature InstallDNS 
-        { 
+        WindowsFeature InstallDNS
+        {
             Ensure = 'Present'
-            Name = 'DNS'
+            Name   = 'DNS'
         }
 
         WindowsFeature InstallDNSTools
         {
-            Ensure = 'Present'
-            Name = 'RSAT-DNS-Server'
+            Ensure    = 'Present'
+            Name      = 'RSAT-DNS-Server'
             DependsOn = '[WindowsFeature]InstallDNS'
         }
 
         DnsServerAddress SetDNS
-        { 
+        {
             Address = '127.0.0.1'
-            InterfaceAlias = $interfaceAlias
-            AddressFamily = 'IPv4'
-            DependsOn = '[WindowsFeature]InstallDNS'
         }
 
-        WindowsFeature InstallADDS
+        # ============================================================
+        # OU-Struktur für EntraSync
+        # ============================================================
+        ADOrganizationalUnit OU_EntraSync
         {
-            Ensure = 'Present'
-            Name = 'AD-Domain-Services'
-            DependsOn = '[WindowsFeature]InstallDNS'
-        }
-
-        WindowsFeature InstallADDSTools
-        {
-            Ensure = 'Present'
-            Name = 'RSAT-ADDS-Tools'
-            DependsOn = '[WindowsFeature]InstallADDS'
-        }
-
-        ADDomain CreateADForest
-        {
-            DomainName = $domainFQDN
+            Name       = 'EntraSync'
+            Path       = "DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
             Credential = $domainCredential
-            SafemodeAdministratorPassword = $domainCredential
-            ForestMode = 'WinThreshold'
-            DatabasePath = 'C:\NTDS'
-            LogPath = 'C:\NTDS'
-            SysvolPath = 'C:\SYSVOL'
-            DependsOn = '[DnsServerAddress]SetDNS', '[WindowsFeature]InstallADDS'
+            DependsOn  = '[WaitForADDomain]WaitForDomainController'
         }
 
-        PendingReboot RebootAfterCreatingADForest
+        ADOrganizationalUnit OU_Users
         {
-            Name = 'RebootAfterCreatingADForest'
-            DependsOn = "[ADDomain]CreateADForest"
-        }
-        WaitForADDomain WaitForDomainController
-        {
-            DomainName = $domainFQDN
-            WaitTimeout = 600
-            RestartCount = 3
+            Name       = 'Users'
+            Path       = "OU=EntraSync,DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
             Credential = $domainCredential
-            WaitForValidCredentials = $true
-            DependsOn = "[PendingReboot]RebootAfterCreatingADForest"
-        }
-# Start neuer Block mit OUs
-        ADOrganizationalUnit OU_EntraSync {
-            Name        = 'EntraSync'
-            Path        = "DC=contoso,DC=com" # Domain anpassen
-            Ensure      = 'Present'
-            Credential  = $domainCredential
-            DependsOn   = '[WaitForADDomain]WaitForDomainController'
+            DependsOn  = '[ADOrganizationalUnit]OU_EntraSync'
         }
 
-        ADOrganizationalUnit OU_Users {
-            Name        = 'Users'
-            Path        = 'OU=EntraSync,DC=contoso,DC=com' # Domain anpassen
-            Ensure      = 'Present'
-            Credential  = $domainCredential
-            DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
+        ADOrganizationalUnit OU_Groups
+        {
+            Name       = 'Groups'
+            Path       = "OU=EntraSync,DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_EntraSync'
         }
 
-        ADOrganizationalUnit OU_Groups {
-            Name        = 'Groups'
-            Path        = 'OU=EntraSync,DC=contoso,DC=com' # Domain anpassen
-            Ensure      = 'Present'
-            Credential  = $domainCredential
-            DependsOn   = '[ADOrganizationalUnit]OU_EntraSync'
+        # ============================================================
+        # Neue OU-Struktur für NotSynced
+        # ============================================================
+        ADOrganizationalUnit OU_NotSynced
+        {
+            Name       = 'NotSynced'
+            Path       = "DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_EntraSync'
         }
-# neuer Block mit OU's ENDE        
+
+        ADOrganizationalUnit OU_NotSynced_Users
+        {
+            Name       = 'Users'
+            Path       = "OU=NotSynced,DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_NotSynced'
+        }
+
+        ADOrganizationalUnit OU_NotSynced_Groups
+        {
+            Name       = 'Groups'
+            Path       = "OU=NotSynced,DC=$domainSuffix,DC=local"
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_NotSynced'
+        }
+
+        # ============================================================
+        # Gruppen in EntraSync\Groups
+        # ============================================================
+        ADGroup AVD_Access
+        {
+            GroupName  = 'AVD-Access'
+            Path       = "OU=Groups,OU=EntraSync,DC=$domainSuffix,DC=local"
+            GroupScope = 'Global'
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_Groups'
+        }
+
+        ADGroup AVD_ProfileAccess
+        {
+            GroupName  = 'AVD-ProfileAccess'
+            Path       = "OU=Groups,OU=EntraSync,DC=$domainSuffix,DC=local"
+            GroupScope = 'Global'
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADOrganizationalUnit]OU_Groups'
+        }
+
+        # ============================================================
+        # Benutzer MaxMustermann in EntraSync\Users
+        # ============================================================
+        ADUser MaxMustermann
+        {
+            UserName        = 'MaxMustermann'
+            SamAccountName  = 'MaxMustermann'
+            GivenName       = 'Max'
+            Surname         = 'Mustermann'
+            DisplayName     = 'Max Mustermann'
+            Path            = "OU=Users,OU=EntraSync,DC=$domainSuffix,DC=local"
+            AccountPassword = (ConvertTo-SecureString 'Passw0rd!' -AsPlainText -Force) 
+            Enabled         = $true
+            Ensure          = 'Present'
+            Credential      = $domainCredential
+            DependsOn       = '[ADOrganizationalUnit]OU_EntraSync_Users'
+        }
+
+        # ============================================================
+        # Mitgliedschaften
+        # ============================================================
+        ADGroupMember AVD_Access_Member
+        {
+            Group      = 'AVD-Access'
+            Members    = @('MaxMustermann')
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADUser]MaxMustermann'
+        }
+
+        ADGroupMember AVD_ProfileAccess_Member
+        {
+            Group      = 'AVD-ProfileAccess'
+            Members    = @('MaxMustermann')
+            Ensure     = 'Present'
+            Credential = $domainCredential
+            DependsOn  = '[ADUser]MaxMustermann'
+        }
     }
 }
 
+# Hilfsfunktion für NetBIOS-Name
 function Get-NetBIOSName {
     [OutputType([string])]
     param(
@@ -129,9 +187,7 @@ function Get-NetBIOSName {
 
     if ($domainFQDN.Contains('.')) {
         $length = $domainFQDN.IndexOf('.')
-        if ( $length -ge 16) {
-            $length = 15
-        }
+        if ($length -ge 16) { $length = 15 }
         return $domainFQDN.Substring(0, $length)
     }
     else {
